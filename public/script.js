@@ -42,10 +42,21 @@ async function fetchUserData() {
 }
 
 function updateStatusUI(userData) {
+    console.log('Updating UI with:', userData);
     const planStatus = document.getElementById('plan-status');
     const expiryStatus = document.getElementById('expiry-status');
 
-    planStatus.textContent = `${userData.subscription_type || 'Free'} Plan`;
+    if (!userData) return;
+
+    const currentPlan = userData.subscription_type || 'Free';
+    planStatus.textContent = `${currentPlan} Plan`;
+    
+    // Change color based on plan
+    if (currentPlan === 'Free') {
+        planStatus.style.color = 'var(--text-muted)';
+    } else {
+        planStatus.style.color = 'var(--success)';
+    }
     
     if (userData.subscription_expiry) {
         const date = new Date(userData.subscription_expiry);

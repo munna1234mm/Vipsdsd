@@ -147,9 +147,12 @@ app.get('/admin', (req, res) => {
 app.get('/api/user/:chatId', async (req, res) => {
     if (!db) return res.status(503).json({ error: 'Database not ready' });
     try {
-        const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [req.params.chatId]);
+        const chatId = String(req.params.chatId);
+        const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+        console.log(`API Fetch User ${chatId}:`, user);
         res.json(user || { error: 'User not found' });
     } catch (err) {
+        console.error('API Error fetching user:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -192,12 +195,17 @@ app.post('/api/admin/generate-code', async (req, res) => {
 app.post('/api/redeem', async (req, res) => {
     const { chatId, code } = req.body;
     if (!db) return res.status(503).json({ error: 'Database not ready' });
+    if (!chatId || !code) return res.status(400).json({ error: 'Missing chatId or code' });
 
     try {
+        const cleanCode = String(code).trim().toUpperCase();
+        console.log(`Attempting redemption for ${chatId} with code: ${cleanCode}`);
+
         // Find code case-insensitively
-        const redeemCode = await db.get('SELECT * FROM redeem_codes WHERE UPPER(code) = UPPER(?) AND is_used = 0', [code.trim()]);
+        const redeemCode = await db.get('SELECT * FROM redeem_codes WHERE UPPER(code) = ? AND is_used = 0', [cleanCode]);
         
         if (!redeemCode) {
+            console.log(`Invalid code attempt: ${cleanCode}`);
             return res.status(400).json({ error: 'Invalid or already used code' });
         }
 
@@ -206,7 +214,7 @@ app.post('/api/redeem', async (req, res) => {
             await db.run('UPDATE users SET balance = balance + ? WHERE chat_id = ?', [parseInt(redeemCode.value), chatId]);
         } else if (redeemCode.type === 'Subscription') {
             const plan = redeemCode.value;
-            let days = 7; // Default
+            let days = 7;
             if (plan === 'SVIP') days = 15;
             else if (plan === 'SSVIP') days = 30;
             else if (plan === 'KING') days = 60;
@@ -214,6 +222,8 @@ app.post('/api/redeem', async (req, res) => {
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + days);
             
+            console.log(`Activating ${plan} for ${chatId} until ${expiryDate.toISOString()}`);
+
             await db.run(
                 'UPDATE users SET subscription_type = ?, subscription_expiry = ? WHERE chat_id = ?',
                 [plan, expiryDate.toISOString(), chatId]
@@ -225,10 +235,11 @@ app.post('/api/redeem', async (req, res) => {
         
         // Fetch updated user to return to frontend
         const updatedUser = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+        console.log(`Redemption successful for ${chatId}. New status:`, updatedUser);
         res.json({ message: 'Code redeemed successfully!', user: updatedUser });
         
     } catch (err) {
-        console.error('Redeem error:', err);
+        console.error('CRITICAL REDEEM ERROR:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
