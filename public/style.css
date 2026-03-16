@@ -68,6 +68,20 @@ header {
     color: var(--text-muted);
 }
 
+.status-container {
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+#plan-status {
+    color: var(--success);
+    font-weight: 700;
+}
+
+#expiry-status {
+    color: var(--text-muted);
+}
+
 h1 {
     font-size: 2.2rem;
     font-weight: 800;

@@ -194,39 +194,42 @@ app.post('/api/redeem', async (req, res) => {
     if (!db) return res.status(503).json({ error: 'Database not ready' });
 
     try {
-        const redeemCode = await db.get('SELECT * FROM redeem_codes WHERE code = ? AND is_used = 0', [code]);
-        if (!redeemCode) return res.status(400).json({ error: 'Invalid or already used code' });
-
-        // If the code was pre-assigned to a chatId, ensure it matches
-        if (redeemCode.used_by && parseInt(redeemCode.used_by) !== parseInt(chatId)) {
-            return res.status(403).json({ error: 'This code is not for you!' });
+        // Find code case-insensitively
+        const redeemCode = await db.get('SELECT * FROM redeem_codes WHERE UPPER(code) = UPPER(?) AND is_used = 0', [code.trim()]);
+        
+        if (!redeemCode) {
+            return res.status(400).json({ error: 'Invalid or already used code' });
         }
 
+        // Apply reward
         if (redeemCode.type === 'Balance') {
             await db.run('UPDATE users SET balance = balance + ? WHERE chat_id = ?', [parseInt(redeemCode.value), chatId]);
         } else if (redeemCode.type === 'Subscription') {
             const plan = redeemCode.value;
-            let days = 0;
-            if (plan === 'VIP') days = 7;
-            else if (plan === 'SVIP') days = 15;
+            let days = 7; // Default
+            if (plan === 'SVIP') days = 15;
             else if (plan === 'SSVIP') days = 30;
             else if (plan === 'KING') days = 60;
 
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + days);
-            const expiryStr = expiryDate.toISOString();
-
+            
             await db.run(
                 'UPDATE users SET subscription_type = ?, subscription_expiry = ? WHERE chat_id = ?',
-                [plan, expiryStr, chatId]
+                [plan, expiryDate.toISOString(), chatId]
             );
         }
 
+        // Mark code as used
         await db.run('UPDATE redeem_codes SET is_used = 1, used_by = ? WHERE id = ?', [chatId, redeemCode.id]);
-        res.json({ message: 'Code redeemed successfully!' });
+        
+        // Fetch updated user to return to frontend
+        const updatedUser = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+        res.json({ message: 'Code redeemed successfully!', user: updatedUser });
+        
     } catch (err) {
         console.error('Redeem error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

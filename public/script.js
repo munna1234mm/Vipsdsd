@@ -31,10 +31,27 @@ async function fetchUserData() {
     if (!user?.id) return;
     try {
         const response = await fetch(`/api/user/${user.id}`);
-        const data = await response.json();
-        console.log('User data:', data);
+        const userData = await response.json();
+        
+        if (userData && !userData.error) {
+            updateStatusUI(userData);
+        }
     } catch (err) {
         console.error('Error fetching user data:', err);
+    }
+}
+
+function updateStatusUI(userData) {
+    const planStatus = document.getElementById('plan-status');
+    const expiryStatus = document.getElementById('expiry-status');
+
+    planStatus.textContent = `${userData.subscription_type || 'Free'} Plan`;
+    
+    if (userData.subscription_expiry) {
+        const date = new Date(userData.subscription_expiry);
+        expiryStatus.textContent = `Valid until ${date.toLocaleDateString()}`;
+    } else {
+        expiryStatus.textContent = 'Never expires';
     }
 }
 
@@ -60,6 +77,7 @@ redeemBtn.addEventListener('click', async () => {
             redeemStatus.textContent = data.message;
             redeemStatus.className = 'success';
             redeemCodeInput.value = '';
+            if (data.user) updateStatusUI(data.user);
         } else {
             redeemStatus.textContent = data.error;
             redeemStatus.className = 'error';
