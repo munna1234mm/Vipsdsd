@@ -190,18 +190,37 @@ async function startBot() {
             }
 
             // Plan Validation Logic
-            let isPremium = isAdmin; // Admin is always premium
+            let isPremium = isAdmin;
+            let debugInfo = `User: ${chatId} | Admin: ${isAdmin}`;
+            
             if (!isPremium && user) {
                 const now = new Date();
-                const expiry = user.subscription_expiry ? new Date(user.subscription_expiry) : null;
+                const rawExpiry = user.subscription_expiry;
+                const expiry = rawExpiry ? new Date(rawExpiry) : null;
+                const hasValidType = user.subscription_type && user.subscription_type !== 'Free' && user.subscription_type !== 'Loading...';
                 
-                // User is premium if type is not Free AND they have a future expiry date
-                if (user.subscription_type !== 'Free' && expiry && expiry > now) {
-                    isPremium = true;
+                // Be more lenient: if they have a premium type and (no expiry OR future expiry)
+                // Actually, if we want to be strict about expiry, we check if it's a valid date and in the future.
+                const isDateValid = expiry instanceof Date && !isNaN(expiry);
+                
+                if (hasValidType) {
+                    if (!isDateValid) {
+                        // If no valid expiry date but has a plan type, assume it's valid for now 
+                        // (or handle as permanent if that's a thing)
+                        isPremium = true; 
+                        debugInfo += ` | Type: ${user.subscription_type} | Expiry: MISSING/INVALID (Allowed)`;
+                    } else if (expiry > now) {
+                        isPremium = true;
+                        debugInfo += ` | Type: ${user.subscription_type} | Expiry: ${rawExpiry} (Valid)`;
+                    } else {
+                        debugInfo += ` | Type: ${user.subscription_type} | Expiry: ${rawExpiry} (EXPIRED)`;
+                    }
+                } else {
+                    debugInfo += ` | Type: ${user.subscription_type || 'None'} (Free Account)`;
                 }
             }
             
-            console.log(`[MEMBERSHIP] User: ${chatId} | Admin: ${isAdmin} | Type: ${user?.subscription_type} | Premium: ${isPremium}`);
+            console.log(`[MEMBERSHIP] ${debugInfo} | Final Result: ${isPremium}`);
 
             if (isPremium) {
                 // SEND TO PM
