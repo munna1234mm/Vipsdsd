@@ -11,77 +11,94 @@ async function startBot() {
     db = await setupDb();
 
     bot.start(async (ctx) => {
-        const chatId = ctx.from.id;
-        const username = ctx.from.username || 'N/A';
-        const referralCode = ctx.startPayload;
+        try {
+            const chatId = ctx.from.id;
+            const username = ctx.from.username || 'N/A';
+            const referralCode = ctx.startPayload;
 
-        let user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+            let user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
 
-        if (!user) {
-            let referrerId = null;
-            if (referralCode && parseInt(referralCode) !== chatId) {
-                const referrer = await db.get('SELECT * FROM users WHERE chat_id = ?', [parseInt(referralCode)]);
-                if (referrer) {
-                    referrerId = referrer.chat_id;
-                    await db.run('UPDATE users SET balance = balance + 5, referral_count = referral_count + 1 WHERE chat_id = ?', [referrerId]);
+            if (!user) {
+                let referrerId = null;
+                if (referralCode && parseInt(referralCode) !== chatId) {
+                    const referrer = await db.get('SELECT * FROM users WHERE chat_id = ?', [parseInt(referralCode)]);
+                    if (referrer) {
+                        referrerId = referrer.chat_id;
+                        await db.run('UPDATE users SET balance = balance + 5, referral_count = referral_count + 1 WHERE chat_id = ?', [referrerId]);
+                    }
                 }
+
+                await db.run(
+                    'INSERT INTO users (chat_id, username, referred_by) VALUES (?, ?, ?)',
+                    [chatId, username, referrerId]
+                );
+                
+                user = {
+                    chat_id: chatId,
+                    username: username,
+                    balance: 0,
+                    subscription_type: 'Free',
+                    referral_count: 0
+                };
             }
 
-            await db.run(
-                'INSERT INTO users (chat_id, username, referred_by) VALUES (?, ?, ?)',
-                [chatId, username, referrerId]
-            );
-            
-            // Set default values for the new user object to avoid refetching immediately
-            user = {
-                chat_id: chatId,
-                username: username,
-                balance: 0,
-                subscription_type: 'Free',
-                referral_count: 0
-            };
+            const welcomeMsg = `👋 *Welcome, ${ctx.from.first_name}!* \n\n` +
+                `💰 Balance: *${user.balance ?? 0} USD*\n` +
+                `💎 Status: *${user.subscription_type ?? 'Free'}*\n` +
+                `👥 Referrals: *${user.referral_count ?? 0}*\n\n` +
+                `Use the buttons below to navigate.`;
+
+            ctx.replyWithMarkdown(welcomeMsg, Markup.keyboard([
+                [Markup.button.webApp('🌐 Open Web App', 'https://vipsdsd.onrender.com')],
+                ['💰 Balance', '👥 Refer'],
+                ['👤 Profile', '📞 Support']
+            ]).resize());
+        } catch (err) {
+            console.error('Error in start handler:', err);
         }
-
-        const welcomeMsg = `👋 *Welcome, ${ctx.from.first_name}!* \n\n` +
-            `💰 Balance: *${user.balance} USD*\n` +
-            `💎 Status: *${user.subscription_type}*\n` +
-            `👥 Referrals: *${user.referral_count}*\n\n` +
-            `Use the buttons below to navigate.`;
-
-        ctx.replyWithMarkdown(welcomeMsg, Markup.keyboard([
-            [Markup.button.webApp('🌐 Open Web App', 'https://vipsdsd.onrender.com')],
-            ['💰 Balance', '👥 Refer'],
-            ['👤 Profile', '📞 Support']
-        ]).resize());
     });
 
     bot.hears('💰 Balance', async (ctx) => {
-        const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [ctx.from.id]);
-        if (!user) return ctx.reply('Please send /start to register first.');
-        ctx.replyWithMarkdown(`💰 Your current balance: *${user.balance} USD*`);
+        try {
+            const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [ctx.from.id]);
+            console.log(`Balance check for ${ctx.from.id}:`, user);
+            if (!user) return ctx.reply('Please send /start to register first.');
+            ctx.replyWithMarkdown(`💰 Your current balance: *${user.balance || 0} USD*`);
+        } catch (err) {
+            console.error('Error in Balance handler:', err);
+        }
     });
 
     bot.hears('👥 Refer', async (ctx) => {
-        const botInfo = await bot.telegram.getMe();
-        const refLink = `https://t.me/${botInfo.username}?start=${ctx.from.id}`;
-        
-        ctx.replyWithMarkdown(
-            `👥 *Referral System*\n\n` +
-            `Your referral link:\n\`${refLink}\`\n\n` +
-            `Earn 5 units for every successful referral!`
-        );
+        try {
+            const botInfo = await bot.telegram.getMe();
+            const refLink = `https://t.me/${botInfo.username}?start=${ctx.from.id}`;
+            ctx.replyWithMarkdown(
+                `👥 *Referral System*\n\n` +
+                `Your referral link:\n\`${refLink}\`\n\n` +
+                `Earn 5 units for every successful referral!`
+            );
+        } catch (err) {
+            console.error('Error in Refer handler:', err);
+        }
     });
 
     bot.hears('👤 Profile', async (ctx) => {
-        const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [ctx.from.id]);
-        if (!user) return ctx.reply('Please send /start to register first.');
-        const profileMsg = `👤 *Your Profile*\n\n` +
-            `🆔 ID: \`${ctx.from.id}\`\n` +
-            `👤 Username: @${ctx.from.username || 'N/A'}\n` +
-            `💰 Balance: *${user.balance} USD*\n` +
-            `💎 Plan: *${user.subscription_type}*\n` +
-            `👥 Referrals: *${user.referral_count}*`;
-        ctx.replyWithMarkdown(profileMsg);
+        try {
+            const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [ctx.from.id]);
+            console.log(`Profile check for ${ctx.from.id}:`, user);
+            if (!user) return ctx.reply('Please send /start to register first.');
+            
+            const profileMsg = `👤 *Your Profile*\n\n` +
+                `🆔 ID: \`${ctx.from.id}\`\n` +
+                `👤 Username: @${ctx.from.username || 'N/A'}\n` +
+                `💰 Balance: *${user.balance || 0} USD*\n` +
+                `💎 Plan: *${user.subscription_type || 'Free'}*\n` +
+                `👥 Referrals: *${user.referral_count || 0}*`;
+            ctx.replyWithMarkdown(profileMsg);
+        } catch (err) {
+            console.error('Error in Profile handler:', err);
+        }
     });
 
     bot.hears('📞 Support', (ctx) => {
@@ -89,11 +106,15 @@ async function startBot() {
     });
 
     bot.hears(/^[!\/]?(id)$/i, async (ctx) => {
-        if (ctx.message.reply_to_message) {
-            const targetUser = ctx.message.reply_to_message.from;
-            ctx.replyWithMarkdown(`👤 User: [${targetUser.first_name}](tg://user?id=${targetUser.id})\n🆔 ID: \`${targetUser.id}\``);
-        } else {
-            ctx.replyWithMarkdown(`🆔 Your ID: \`${ctx.from.id}\``);
+        try {
+            if (ctx.message.reply_to_message) {
+                const targetUser = ctx.message.reply_to_message.from;
+                ctx.replyWithMarkdown(`👤 User: [${targetUser.first_name}](tg://user?id=${targetUser.id})\n🆔 ID: \`${targetUser.id}\``);
+            } else {
+                ctx.replyWithMarkdown(`🆔 Your ID: \`${ctx.from.id}\``);
+            }
+        } catch (err) {
+            console.error('Error in id handler:', err);
         }
     });
 
