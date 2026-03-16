@@ -1,7 +1,7 @@
 const { Telegraf, Markup } = require('telegraf');
 const { setupDb } = require('./database');
-const { initializeApp } = require('firebase/app');
-const { getFirestore, doc, setDoc } = require('firebase/firestore');
+const firebase = require('firebase/compat/app');
+require('firebase/compat/firestore');
 require('dotenv').config();
 
 // Firebase Config
@@ -15,12 +15,12 @@ const firebaseConfig = {
   measurementId: "G-90385K6XNW"
 };
 
-const fbApp = initializeApp(firebaseConfig);
-const fsDb = getFirestore(fbApp);
+const fbApp = firebase.initializeApp(firebaseConfig);
+const fsDb = fbApp.firestore();
 
 async function syncUserToFirebase(chatId, data) {
     try {
-        await setDoc(doc(fsDb, "users", String(chatId)), {
+        await fsDb.collection("users").doc(String(chatId)).set({
             ...data,
             lastUpdated: new Date().toISOString()
         }, { merge: true });
