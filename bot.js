@@ -90,6 +90,10 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 app.get('/api/user/:chatId', async (req, res) => {
     if (!db) return res.status(503).json({ error: 'Database not ready' });
     try {
@@ -110,6 +114,19 @@ app.get('/api/user-photo/:chatId', async (req, res) => {
         } else {
             res.json({ photoUrl: null });
         }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/generate-code', async (req, res) => {
+    const { type, value, adminId } = req.body;
+    if (adminId !== process.env.ADMIN_ID) return res.status(403).json({ error: 'Unauthorized' });
+
+    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+    try {
+        await db.run('INSERT INTO redeem_codes (code, type, value) VALUES (?, ?, ?)', [code, type, value]);
+        res.json({ code });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

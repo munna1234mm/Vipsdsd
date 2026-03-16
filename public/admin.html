@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Code Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0,255,0,0.1);
+            border: 1px dashed var(--success);
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        .result-code {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--success);
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <h1>Code Generator</h1>
+        <div class="form-group">
+            <label>Admin ID</label>
+            <input type="text" id="admin-id" placeholder="Enter Admin ID from .env">
+        </div>
+        <div class="form-group">
+            <label>Redeem Type</label>
+            <select id="redeem-type">
+                <option value="Subscription">Subscription</option>
+                <option value="Balance">Balance</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Value (Plan Name or Amount)</label>
+            <select id="redeem-value">
+                <option value="VIP">VIP (7 Days)</option>
+                <option value="SVIP">SVIP (15 Days)</option>
+                <option value="SSVIP">SSVIP (30 Days)</option>
+                <option value="KING">KING (60 Days)</option>
+            </select>
+            <input type="number" id="balance-amount" style="display:none;" placeholder="Enter USD amount">
+        </div>
+        <button id="generate-btn" class="buy-btn">Generate Code</button>
+
+        <div id="result" class="result-box">
+            <p>Generated Code:</p>
+            <div class="result-code" id="generated-code">XXXX-XXXX</div>
+            <p style="font-size: 0.8rem; margin-top: 10px;">Copy and send this to the user.</p>
+        </div>
+    </div>
+
+    <script>
+        const typeSelect = document.getElementById('redeem-type');
+        const valueSelect = document.getElementById('redeem-value');
+        const balanceInput = document.getElementById('balance-amount');
+        const generateBtn = document.getElementById('generate-btn');
+        const resultBox = document.getElementById('result');
+        const codeDisplay = document.getElementById('generated-code');
+        const adminIdInput = document.getElementById('admin-id');
+
+        typeSelect.addEventListener('change', () => {
+            if (typeSelect.value === 'Balance') {
+                valueSelect.style.display = 'none';
+                balanceInput.style.display = 'block';
+            } else {
+                valueSelect.style.display = 'block';
+                balanceInput.style.display = 'none';
+            }
+        });
+
+        generateBtn.addEventListener('click', async () => {
+            const type = typeSelect.value;
+            const value = type === 'Balance' ? balanceInput.value : valueSelect.value;
+            const adminId = adminIdInput.value;
+
+            if (!value || !adminId) return alert('Please fill all fields');
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+
+            try {
+                const res = await fetch('/api/admin/generate-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, value, adminId })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    resultBox.style.display = 'block';
+                    codeDisplay.textContent = data.code;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('Request failed');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Code';
+            }
+        });
+    </script>
+</body>
+</html>
