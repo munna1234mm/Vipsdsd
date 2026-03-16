@@ -3,16 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Code Generator</title>
+    <title>VIP Admin Panel</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .admin-container {
-            max-width: 500px;
-            margin: 50px auto;
+        :root {
+            --primary-glow: rgba(99, 102, 241, 0.5);
+        }
+        .admin-layout {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .admin-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .auth-card {
             background: var(--card-bg);
-            padding: 30px;
+            padding: 20px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+        .tab-content {
+            display: none;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .form-group {
             margin-bottom: 20px;
@@ -20,144 +69,185 @@
         label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-muted);
         }
-        select, input {
+        select, input, textarea {
             width: 100%;
             padding: 12px;
-            border-radius: 10px;
+            border-radius: 12px;
             background: rgba(0,0,0,0.2);
             border: 1px solid rgba(255,255,255,0.1);
             color: white;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0,0,0,0.4);
         }
         .result-box {
             margin-top: 20px;
             padding: 20px;
-            background: rgba(0,255,0,0.1);
-            border: 1px dashed var(--success);
-            border-radius: 10px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px dashed var(--success);
+            border-radius: 15px;
             text-align: center;
             display: none;
         }
         .result-code {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: 800;
             color: var(--success);
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            margin: 10px 0;
+            user-select: all;
         }
-        .section-separator {
-            margin: 40px 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
+        .list-container {
+            margin-top: 25px;
+            max-height: 400px;
+            overflow-y: auto;
         }
-        .command-list {
-            margin-top: 20px;
-        }
-        .command-item {
-            background: rgba(0,0,0,0.2);
+        .item-card {
+            background: rgba(255,255,255,0.03);
             padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .item-info b {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+        .item-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
         .delete-btn {
-            background: #ff4d4d;
-            padding: 5px 10px;
-            font-size: 0.8rem;
-            border-radius: 5px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: 0.2s;
         }
+        .delete-btn:hover { background: #dc2626; transform: scale(1.05); }
     </style>
 </head>
 <body>
-    <div class="admin-container">
-        <h1>Code Generator</h1>
-        <div class="form-group">
-            <label>Admin ID</label>
-            <input type="text" id="admin-id" placeholder="Enter Admin ID from .env">
-        </div>
-        <div class="form-group">
-            <label>Target User Chat ID (Optional)</label>
-            <input type="text" id="target-chat-id" placeholder="Enter user's Chat ID">
-        </div>
-        <div class="form-group">
-            <label>Redeem Type</label>
-            <select id="redeem-type">
-                <option value="Subscription">Subscription</option>
-                <option value="Balance">Balance</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Value (Plan Name or Amount)</label>
-            <select id="redeem-value">
-                <option value="VIP">VIP (7 Days)</option>
-                <option value="SVIP">SVIP (15 Days)</option>
-                <option value="SSVIP">SSVIP (30 Days)</option>
-                <option value="KING">KING (60 Days)</option>
-            </select>
-            <input type="number" id="balance-amount" style="display:none;" placeholder="Enter USD amount">
-        </div>
-        <button id="generate-btn" class="buy-btn">Generate Code</button>
+    <div class="admin-layout">
+        <header class="admin-header">
+            <h1>Admin Panel</h1>
+            <p style="color: var(--text-muted);">Manage your VIP Bot system</p>
+        </header>
 
-        <div id="result" class="result-box">
-            <p>Generated Code:</p>
-            <div class="result-code" id="generated-code">XXXX-XXXX</div>
-            <p style="font-size: 0.8rem; margin-top: 10px;">Copy and send this to the user.</p>
+        <section class="auth-card">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Admin Access Key</label>
+                <input type="password" id="admin-id" placeholder="Enter Admin ID from .env">
+            </div>
+        </section>
+
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="openTab('codes')">Redeem Codes</button>
+            <button class="tab-btn" onclick="openTab('commands')">Custom Commands</button>
         </div>
 
-        <div class="section-separator"></div>
+        <!-- tab: Redeem Codes -->
+        <div id="codes" class="tab-content active">
+            <h2>Generate Redeem Code</h2>
+            <div class="form-group">
+                <label>Target User (Optional)</label>
+                <input type="text" id="target-chat-id" placeholder="User's Chat ID">
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="redeem-type">
+                    <option value="Subscription">Subscription</option>
+                    <option value="Balance">Balance</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Plan / Amount</label>
+                <select id="redeem-value">
+                    <option value="VIP">VIP (7 Days)</option>
+                    <option value="SVIP">SVIP (15 Days)</option>
+                    <option value="SSVIP">SSVIP (30 Days)</option>
+                    <option value="KING">KING (60 Days)</option>
+                </select>
+                <input type="number" id="balance-amount" style="display:none;" placeholder="Enter USD amount">
+            </div>
+            <button id="generate-btn" class="buy-btn">Generate Now</button>
 
-        <h2>Custom Commands Manager</h2>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">
-            Commands defined here will trigger private responses when used in groups.
-        </p>
-        
-        <div class="form-group">
-            <label>Command (e.g. !help)</label>
-            <input type="text" id="new-command" placeholder="!command">
+            <div id="result" class="result-box">
+                <p>Code generated successfully!</p>
+                <div class="result-code" id="generated-code">XXXX-XXXX</div>
+            </div>
         </div>
-        <div class="form-group">
-            <label>Auto Response Message</label>
-            <textarea id="command-response" style="width: 100%; padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" rows="3" placeholder="Enter the message you want to send privately"></textarea>
-        </div>
-        <button id="add-command-btn" class="buy-btn">Add Command</button>
 
-        <div class="command-list" id="command-list-container">
-            <!-- Commands will load here -->
-            <p style="text-align: center; color: var(--text-muted);">Loading commands...</p>
+        <!-- tab: Custom Commands -->
+        <div id="commands" class="tab-content">
+            <h2>Command Manager</h2>
+            <div class="form-group">
+                <label>Trigger (e.g. !help)</label>
+                <input type="text" id="new-command" placeholder="!command">
+            </div>
+            <div class="form-group">
+                <label>Response Message (Sent via PM)</label>
+                <textarea id="command-response" rows="4" placeholder="Enter response text..."></textarea>
+            </div>
+            <button id="add-command-btn" class="buy-btn">Add Command</button>
+
+            <div class="list-container" id="command-list">
+                <p style="text-align: center; color: var(--text-muted);">Switch tabs to refresh lists...</p>
+            </div>
         </div>
     </div>
 
     <script>
+        // Global State
+        const adminIdInput = document.getElementById('admin-id');
+
+        // Tab Switching
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            
+            if (tabId === 'commands') fetchCommands();
+        }
+
+        // --- Code Generation Logic ---
         const typeSelect = document.getElementById('redeem-type');
         const valueSelect = document.getElementById('redeem-value');
         const balanceInput = document.getElementById('balance-amount');
         const generateBtn = document.getElementById('generate-btn');
-        const resultBox = document.getElementById('result');
-        const codeDisplay = document.getElementById('generated-code');
-        const adminIdInput = document.getElementById('admin-id');
 
         typeSelect.addEventListener('change', () => {
-            if (typeSelect.value === 'Balance') {
-                valueSelect.style.display = 'none';
-                balanceInput.style.display = 'block';
-            } else {
-                valueSelect.style.display = 'block';
-                balanceInput.style.display = 'none';
-            }
+            const isBalance = typeSelect.value === 'Balance';
+            valueSelect.style.display = isBalance ? 'none' : 'block';
+            balanceInput.style.display = isBalance ? 'block' : 'none';
         });
 
         generateBtn.addEventListener('click', async () => {
+            const adminId = adminIdInput.value.trim();
             const type = typeSelect.value;
             const value = type === 'Balance' ? balanceInput.value : valueSelect.value;
-            const adminId = adminIdInput.value;
-            const targetChatId = document.getElementById('target-chat-id').value;
+            const targetChatId = document.getElementById('target-chat-id').value.trim();
 
-            if (!value || !adminId) return alert('Please fill all fields');
+            if (!adminId || !value) return alert('Please enter Admin ID and Value');
 
             generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating...';
+            generateBtn.textContent = 'Processing...';
 
             try {
                 const res = await fetch('/api/admin/generate-code', {
@@ -166,48 +256,52 @@
                     body: JSON.stringify({ type, value, adminId, targetChatId })
                 });
                 const data = await res.json();
-                
                 if (res.ok) {
-                    resultBox.style.display = 'block';
-                    codeDisplay.textContent = data.code;
+                    document.getElementById('result').style.display = 'block';
+                    document.getElementById('generated-code').textContent = data.code;
                 } else {
                     alert('Error: ' + data.error);
                 }
             } catch (err) {
-                alert('Request failed');
+                alert('Connection failed');
             } finally {
                 generateBtn.disabled = false;
-                generateBtn.textContent = 'Generate Code';
+                generateBtn.textContent = 'Generate Now';
             }
         });
 
-        // Command Management Logic
+        // --- Command Manager Logic ---
         const addCmdBtn = document.getElementById('add-command-btn');
-        const cmdListContainer = document.getElementById('command-list-container');
-        
+        const commandList = document.getElementById('command-list');
+
         async function fetchCommands() {
-            const adminId = adminIdInput.value;
-            if (!adminId) return;
-            
+            const adminId = adminIdInput.value.trim();
+            if (!adminId) {
+                commandList.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Enter Admin ID above to load commands.</p>';
+                return;
+            }
+
             try {
                 const res = await fetch(`/api/admin/commands?adminId=${adminId}`);
                 if (res.ok) {
-                    const commands = await res.json();
-                    renderCommands(commands);
+                    const data = await res.json();
+                    renderCommands(data);
+                } else {
+                    commandList.innerHTML = '<p style="text-align: center; color: #ef4444;">Auth failed or Server error</p>';
                 }
             } catch (err) {}
         }
 
         function renderCommands(commands) {
-            if (commands.length === 0) {
-                cmdListContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No custom commands yet.</p>';
+            if (!commands || commands.length === 0) {
+                commandList.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No commands found.</p>';
                 return;
             }
-            cmdListContainer.innerHTML = commands.map(cmd => `
-                <div class="command-item">
-                    <div>
-                        <b style="color: var(--primary);">${cmd.command}</b><br>
-                        <small style="color: var(--text-muted);">${cmd.response.substring(0, 30)}...</small>
+            commandList.innerHTML = commands.map(cmd => `
+                <div class="item-card">
+                    <div class="item-info">
+                        <b>${cmd.command}</b>
+                        <p>${cmd.response.substring(0, 50)}${cmd.response.length > 50 ? '...' : ''}</p>
                     </div>
                     <button class="delete-btn" onclick="deleteCommand(${cmd.id})">Delete</button>
                 </div>
@@ -215,22 +309,24 @@
         }
 
         async function deleteCommand(id) {
-            const adminId = adminIdInput.value;
-            if (!confirm('Delete this command?')) return;
-            
+            const adminId = adminIdInput.value.trim();
+            if (!confirm('Permanent delete?')) return;
             try {
-                const res = await fetch(`/api/admin/delete-command/${id}?adminId=${adminId}`, { method: 'DELETE' });
-                if (res.ok) fetchCommands();
+                await fetch(`/api/admin/delete-command/${id}?adminId=${adminId}`, { method: 'DELETE' });
+                fetchCommands();
             } catch (err) {}
         }
 
         addCmdBtn.addEventListener('click', async () => {
-            const adminId = adminIdInput.value;
-            const command = document.getElementById('new-command').value;
-            const response = document.getElementById('command-response').value;
+            const adminId = adminIdInput.value.trim();
+            const command = document.getElementById('new-command').value.trim();
+            const response = document.getElementById('command-response').value.trim();
 
-            if (!adminId || !command || !response) return alert('Fill all fields');
+            if (!adminId || !command || !response) {
+                return alert('Fill all fields (Admin ID, Command, and Response)');
+            }
 
+            addCmdBtn.disabled = true;
             try {
                 const res = await fetch('/api/admin/add-command', {
                     method: 'POST',
@@ -245,11 +341,12 @@
                     const d = await res.json();
                     alert(d.error);
                 }
-            } catch (err) {}
+            } catch (err) {
+                alert('Failed to add command');
+            } finally {
+                addCmdBtn.disabled = false;
+            }
         });
-
-        // Load commands when admin ID is entered
-        adminIdInput.addEventListener('blur', fetchCommands);
     </script>
 </body>
 </html>
