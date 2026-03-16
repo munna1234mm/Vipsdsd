@@ -165,10 +165,13 @@ async function startBot() {
     bot.on('message', async (ctx, next) => {
         if (!ctx.message?.text || !db) return next();
         
-        const text = ctx.message.text.trim().toLowerCase();
+        let text = ctx.message.text.trim().toLowerCase();
+        // Support matching with or without / or !
+        const textWithoutPrefix = text.replace(/^[!\/]/, '');
         
         try {
-            const customCmd = await db.get('SELECT * FROM custom_commands WHERE command = ?', [text]);
+            // Check both versions (original and without prefix)
+            const customCmd = await db.get('SELECT * FROM custom_commands WHERE command = ? OR command = ? OR command = ?', [text, textWithoutPrefix, '/' + textWithoutPrefix]);
             if (!customCmd) return next();
 
             const chatId = ctx.from.id;
@@ -183,22 +186,22 @@ async function startBot() {
                 // SEND TO PM
                 try {
                     await ctx.telegram.sendMessage(chatId, customCmd.response);
-                    await ctx.telegram.sendMessage(chatId, "Please check your inbox, the service has been provided to you.");
+                    
+                    // Respond in Group/Chat where command was triggered
+                    await ctx.reply(`Hello ${ctx.from.first_name}, the service has been sent to your inbox, sir!`, {
+                        reply_to_message_id: ctx.message.message_id
+                    });
                 } catch (err) {
                     console.warn(`Could not send PM to ${chatId}:`, err.message);
+                    await ctx.reply(`I couldn't send you a private message. Please start the bot first!`, {
+                        reply_to_message_id: ctx.message.message_id
+                    });
                 }
             } else {
-                // SEND TO PM FOR FREE USERS
-                try {
-                    await ctx.telegram.sendMessage(chatId, "This service is not available for free users. To use this service, you need to upgrade your plan.");
-                } catch (err) {
-                    console.warn(`Could not send PM to ${chatId}:`, err.message);
-                }
-            }
-            
-            // ALWAYS delete the command message from group to keep it hidden/clean
-            if (ctx.chat.type !== 'private') {
-                try { await ctx.deleteMessage(); } catch(e) {}
+                // Respond in Group/Chat for Free Users
+                await ctx.reply(`Sorry ${ctx.from.first_name}, this service is not available for free users. Please upgrade your plan to access this!`, {
+                    reply_to_message_id: ctx.message.message_id
+                });
             }
 
         } catch (err) {
