@@ -55,6 +55,10 @@
             <input type="text" id="admin-id" placeholder="Enter Admin ID from .env">
         </div>
         <div class="form-group">
+            <label>Target User Chat ID (Optional)</label>
+            <input type="text" id="target-chat-id" placeholder="Enter user's Chat ID">
+        </div>
+        <div class="form-group">
             <label>Redeem Type</label>
             <select id="redeem-type">
                 <option value="Subscription">Subscription</option>
@@ -103,6 +107,7 @@
             const type = typeSelect.value;
             const value = type === 'Balance' ? balanceInput.value : valueSelect.value;
             const adminId = adminIdInput.value;
+            const targetChatId = document.getElementById('target-chat-id').value;
 
             if (!value || !adminId) return alert('Please fill all fields');
 
@@ -113,7 +118,7 @@
                 const res = await fetch('/api/admin/generate-code', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type, value, adminId })
+                    body: JSON.stringify({ type, value, adminId, targetChatId })
                 });
                 const data = await res.json();
                 

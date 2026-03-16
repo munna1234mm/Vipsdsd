@@ -170,7 +170,7 @@ app.get('/api/user-photo/:chatId', async (req, res) => {
 });
 
 app.post('/api/admin/generate-code', async (req, res) => {
-    const { type, value, adminId } = req.body;
+    const { type, value, adminId, targetChatId } = req.body;
     // Robust comparison as strings
     if (String(adminId) !== String(process.env.ADMIN_ID)) {
         console.warn(`Unauthorized access attempt with ID: ${adminId}`);
@@ -179,7 +179,10 @@ app.post('/api/admin/generate-code', async (req, res) => {
 
     const code = Math.random().toString(36).substring(2, 10).toUpperCase();
     try {
-        await db.run('INSERT INTO redeem_codes (code, type, value) VALUES (?, ?, ?)', [code, type, value]);
+        await db.run(
+            'INSERT INTO redeem_codes (code, type, value, used_by) VALUES (?, ?, ?, ?)', 
+            [code, type, value, targetChatId ? parseInt(targetChatId) : null]
+        );
         res.json({ code });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -193,6 +196,11 @@ app.post('/api/redeem', async (req, res) => {
     try {
         const redeemCode = await db.get('SELECT * FROM redeem_codes WHERE code = ? AND is_used = 0', [code]);
         if (!redeemCode) return res.status(400).json({ error: 'Invalid or already used code' });
+
+        // If the code was pre-assigned to a chatId, ensure it matches
+        if (redeemCode.used_by && parseInt(redeemCode.used_by) !== parseInt(chatId)) {
+            return res.status(403).json({ error: 'This code is not for you!' });
+        }
 
         if (redeemCode.type === 'Balance') {
             await db.run('UPDATE users SET balance = balance + ? WHERE chat_id = ?', [parseInt(redeemCode.value), chatId]);
