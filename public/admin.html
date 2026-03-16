@@ -202,10 +202,17 @@
                 <input type="text" id="new-command" placeholder="!command">
             </div>
             <div class="form-group">
-                <label>Response Message (Sent via PM)</label>
+                <label>Response Message</label>
                 <textarea id="command-response" rows="4" placeholder="Enter response text..."></textarea>
             </div>
-            <button id="add-command-btn" class="buy-btn">Add Command</button>
+            <div class="form-group">
+                <label>Response Mode</label>
+                <select id="command-mode">
+                    <option value="PM">Private Message (PM)</option>
+                    <option value="Group">Direct Group Reply</option>
+                </select>
+            </div>
+            <button id="add-command-btn" class="buy-btn">Add/Save Command</button>
 
             <div class="list-container" id="command-list">
                 <p style="text-align: center; color: var(--text-muted);">Switch tabs to refresh lists...</p>
@@ -334,10 +341,16 @@
             commandList.innerHTML = commands.map(cmd => `
                 <div class="item-card">
                     <div class="item-info">
-                        <b>${cmd.command}</b>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <b>${cmd.command}</b>
+                            <span style="font-size: 10px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: var(--accent);">${cmd.response_mode || 'PM'}</span>
+                        </div>
                         <p>${cmd.response.substring(0, 50)}${cmd.response.length > 50 ? '...' : ''}</p>
                     </div>
-                    <button class="delete-btn" onclick="deleteCommand(${cmd.id})">Delete</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="delete-btn" style="background: var(--accent); color: white;" onclick='editCommand(${JSON.stringify(cmd).replace(/'/g, "&apos;")})'>Edit</button>
+                        <button class="delete-btn" onclick="deleteCommand(${cmd.id})">Delete</button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -408,10 +421,20 @@
             }
         });
 
+        function editCommand(cmd) {
+            document.getElementById('new-command').value = cmd.command;
+            document.getElementById('command-response').value = cmd.response;
+            document.getElementById('command-mode').value = cmd.response_mode || 'PM';
+            document.getElementById('new-command').focus();
+            // Scroll to form
+            document.querySelector('#commands h2').scrollIntoView({ behavior: 'smooth' });
+        }
+
         addCmdBtn.addEventListener('click', async () => {
             const adminId = adminIdInput.value.trim();
             const command = document.getElementById('new-command').value.trim();
             const response = document.getElementById('command-response').value.trim();
+            const response_mode = document.getElementById('command-mode').value;
 
             if (!adminId || !command || !response) {
                 return alert('Fill all fields (Admin ID, Command, and Response)');
@@ -422,9 +445,10 @@
                 const res = await fetch('/api/admin/add-command', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ adminId, command, response })
+                    body: JSON.stringify({ adminId, command, response, response_mode })
                 });
                 if (res.ok) {
+                    alert('Command synchronized successfully!');
                     document.getElementById('new-command').value = '';
                     document.getElementById('command-response').value = '';
                     fetchCommands();
@@ -433,7 +457,7 @@
                     alert(d.error);
                 }
             } catch (err) {
-                alert('Failed to add command');
+                alert('Failed to save command');
             } finally {
                 addCmdBtn.disabled = false;
             }

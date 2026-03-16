@@ -37,9 +37,17 @@ async function setupDb() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             command TEXT UNIQUE,
             response TEXT,
+            response_mode TEXT DEFAULT 'PM',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+    // Add column if it doesn't exist (for migration)
+    try {
+        db.exec("ALTER TABLE custom_commands ADD COLUMN response_mode TEXT DEFAULT 'PM'");
+    } catch (e) {
+        // Column probably already exists
+    }
 
     // Compatibility shim for async calls in bot.js
     return {

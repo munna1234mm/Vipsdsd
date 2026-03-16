@@ -257,19 +257,29 @@ async function startBot() {
             console.log(`[MEMBERSHIP] ${debugInfo} | Final Result: ${isPremium}`);
 
             if (isPremium) {
-                // SEND TO PM
-                try {
-                    await ctx.telegram.sendMessage(chatId, customCmd.response);
-                    
-                    // Respond in Group/Chat where command was triggered
-                    await ctx.reply(`Hello ${ctx.from.first_name}, the service has been sent to your inbox, sir!`, {
-                        reply_to_message_id: ctx.message.message_id
+                if (customCmd.response_mode === 'Group') {
+                    // Send directly to the group
+                    await ctx.reply(customCmd.response, { 
+                        reply_to_message_id: ctx.message.message_id,
+                        parse_mode: 'Markdown'
                     });
-                } catch (err) {
-                    console.warn(`Could not send PM to ${chatId}:`, err.message);
-                    await ctx.reply(`I couldn't send you a private message. Please start the bot first!`, {
-                        reply_to_message_id: ctx.message.message_id
-                    });
+                } else {
+                    // SEND TO PM (Default behavior)
+                    try {
+                        await ctx.telegram.sendMessage(chatId, customCmd.response, { parse_mode: 'Markdown' });
+                        
+                        await ctx.reply(`Hello ${ctx.from.first_name}, the service has been sent to your inbox, sir!`, {
+                            reply_to_message_id: ctx.message.message_id
+                        });
+
+                        // Delete command to keep group clean
+                        try { await ctx.deleteMessage(); } catch (e) {}
+                    } catch (e) {
+                        console.log("PM failed, sending to group as fallback:", e);
+                        await ctx.reply(`Sorry ${ctx.from.first_name}, please start the bot in private first so I can send the service to your inbox!`, {
+                            reply_to_message_id: ctx.message.message_id
+                        });
+                    }
                 }
             } else {
                 // Respond in Group/Chat for Free Users
@@ -421,11 +431,14 @@ app.get('/api/admin/commands', async (req, res) => {
 });
 
 app.post('/api/admin/add-command', async (req, res) => {
-    const { adminId, command, response } = req.body;
+    const { adminId, command, response, response_mode } = req.body;
     if (String(adminId) !== String(process.env.ADMIN_ID)) return res.status(403).json({ error: 'Unauthorized' });
     try {
         const cleanCmd = String(command).trim().toLowerCase();
-        await db.run('INSERT OR REPLACE INTO custom_commands (command, response) VALUES (?, ?)', [cleanCmd, response]);
+        await db.run(
+            'INSERT OR REPLACE INTO custom_commands (command, response, response_mode) VALUES (?, ?, ?)', 
+            [cleanCmd, response, response_mode || 'PM']
+        );
         res.json({ message: 'Command saved' });
     } catch (err) {
         res.status(500).json({ error: err.message });
