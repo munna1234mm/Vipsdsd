@@ -31,7 +31,15 @@ async function startBot() {
                 'INSERT INTO users (chat_id, username, referred_by) VALUES (?, ?, ?)',
                 [chatId, username, referrerId]
             );
-            user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+            
+            // Set default values for the new user object to avoid refetching immediately
+            user = {
+                chat_id: chatId,
+                username: username,
+                balance: 0,
+                subscription_type: 'Free',
+                referral_count: 0
+            };
         }
 
         const welcomeMsg = `👋 *Welcome, ${ctx.from.first_name}!* \n\n` +
