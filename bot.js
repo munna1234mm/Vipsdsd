@@ -176,11 +176,20 @@ async function startBot() {
 
             const chatId = ctx.from.id;
             const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+            
+            console.log(`[DEBUG] Membership Check for ${chatId}:`, {
+                found: !!user,
+                type: user?.subscription_type,
+                expiry: user?.subscription_expiry,
+                now: new Date().toISOString()
+            });
 
             // Plan Validation Logic
             const isPremium = user && 
                               user.subscription_type !== 'Free' && 
-                              (!user.subscription_expiry || new Date(user.subscription_expiry) > new Date());
+                              (user.subscription_expiry && new Date(user.subscription_expiry) > new Date());
+            
+            console.log(`[DEBUG] isPremium Result: ${isPremium}`);
 
             if (isPremium) {
                 // SEND TO PM
