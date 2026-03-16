@@ -2,6 +2,14 @@ const { Telegraf, Markup } = require('telegraf');
 const { setupDb } = require('./database');
 require('dotenv').config();
 
+// Global error handlers to catch silent crashes
+process.on('uncaughtException', (err) => {
+    console.error('⚠️ UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ UNHANDLED REJECTION:', reason);
+});
+
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const ADMIN_ID = process.env.ADMIN_ID;
 
@@ -129,6 +137,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/health', (req, res) => res.send('OK'));
 
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
