@@ -10,42 +10,65 @@
 <body>
     <div id="app">
         <header>
-            <div class="user-info">
-                <span id="username">Loading...</span>
+            <div class="user-profile">
+                <img id="profile-pic" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff" alt="Profile">
+                <div class="user-details">
+                    <span id="username">Loading...</span>
+                    <span id="user-id">ID: ----</span>
+                </div>
             </div>
-            <h1>Premium Plans</h1>
+            <h1>VIP Subscriptions</h1>
         </header>
 
         <main>
             <div class="plans-container">
-                <div class="plan-card" data-plan="Basic">
-                    <h2>Basic</h2>
-                    <p class="price">$10/month</p>
-                    <ul>
-                        <li>Feature A</li>
-                        <li>Feature B</li>
+                <!-- Starter Plan -->
+                <div class="plan-card" data-plan="Starter">
+                    <div class="plan-header">
+                        <h2>Starter</h2>
+                        <span class="duration">7 Days</span>
+                    </div>
+                    <p class="price">$5</p>
+                    <ul class="features">
+                        <li>Unlimited Hits</li>
+                        <li>Unlimited Bills</li>
+                        <li>7 Days Support</li>
+                        <li>Basic Priority</li>
                     </ul>
-                    <button class="buy-btn">Buy Now</button>
+                    <button class="buy-btn">Choose Starter</button>
                 </div>
-                <div class="plan-card featured" data-plan="Pro">
-                    <span class="badge">Popular</span>
-                    <h2>Pro</h2>
-                    <p class="price">$25/month</p>
-                    <ul>
-                        <li>Feature A</li>
-                        <li>Feature B</li>
-                        <li>Feature C</li>
+
+                <!-- Premium Plan -->
+                <div class="plan-card featured" data-plan="Premium">
+                    <span class="premium-badge">Popular</span>
+                    <div class="plan-header">
+                        <h2>Premium</h2>
+                        <span class="duration">15 Days</span>
+                    </div>
+                    <p class="price">$8</p>
+                    <ul class="features">
+                        <li>Unlimited Hits</li>
+                        <li>Unlimited Bills</li>
+                        <li>15 Days Support</li>
+                        <li>High Priority</li>
                     </ul>
-                    <button class="buy-btn">Buy Now</button>
+                    <button class="buy-btn">Choose Premium</button>
                 </div>
-                <div class="plan-card" data-plan="VIP">
-                    <h2>VIP</h2>
-                    <p class="price">$50/month</p>
-                    <ul>
-                        <li>All Features</li>
-                        <li>Priority Support</li>
+
+                <!-- Elite Plan -->
+                <div class="plan-card" data-plan="Elite">
+                    <div class="plan-header">
+                        <h2>Elite</h2>
+                        <span class="duration">30 Days</span>
+                    </div>
+                    <p class="price">$15</p>
+                    <ul class="features">
+                        <li>Unlimited Hits</li>
+                        <li>Unlimited Bills</li>
+                        <li>30 Days Support</li>
+                        <li>VIP Priority</li>
                     </ul>
-                    <button class="buy-btn">Buy Now</button>
+                    <button class="buy-btn">Choose Elite</button>
                 </div>
             </div>
 

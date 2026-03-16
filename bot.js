@@ -100,6 +100,21 @@ app.get('/api/user/:chatId', async (req, res) => {
     }
 });
 
+app.get('/api/user-photo/:chatId', async (req, res) => {
+    try {
+        const photos = await bot.telegram.getUserProfilePhotos(req.params.chatId);
+        if (photos.total_count > 0) {
+            const fileId = photos.photos[0][0].file_id;
+            const fileLink = await bot.telegram.getFileLink(fileId);
+            res.json({ photoUrl: fileLink.href });
+        } else {
+            res.json({ photoUrl: null });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/redeem', async (req, res) => {
     const { chatId, code } = req.body;
     if (!db) return res.status(503).json({ error: 'Database not ready' });

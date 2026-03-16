@@ -1,5 +1,7 @@
 const tg = window.Telegram.WebApp;
 const usernameEl = document.getElementById('username');
+const userIdEl = document.getElementById('user-id');
+const profilePicEl = document.getElementById('profile-pic');
 const redeemBtn = document.getElementById('redeem-btn');
 const redeemCodeInput = document.getElementById('redeem-code');
 const redeemStatus = document.getElementById('redeem-status');
@@ -9,6 +11,17 @@ tg.expand();
 const user = tg.initDataUnsafe?.user;
 if (user) {
     usernameEl.textContent = `@${user.username || user.first_name}`;
+    userIdEl.textContent = `ID: ${user.id}`;
+    
+    // Fetch profile photo from backend
+    fetch(`/api/user-photo/${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.photoUrl) {
+                profilePicEl.src = data.photoUrl;
+            }
+        })
+        .catch(err => console.error('Error fetching photo:', err));
 } else {
     usernameEl.textContent = 'Guest User';
 }
