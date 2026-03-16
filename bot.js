@@ -147,7 +147,7 @@ app.get('/admin', (req, res) => {
 app.get('/api/user/:chatId', async (req, res) => {
     if (!db) return res.status(503).json({ error: 'Database not ready' });
     try {
-        const chatId = String(req.params.chatId);
+        const chatId = Number(req.params.chatId);
         const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
         console.log(`API Fetch User ${chatId}:`, user);
         res.json(user || { error: 'User not found' });

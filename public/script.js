@@ -27,9 +27,9 @@ if (user) {
 }
 
 // Fetch user data from our API
-async function fetchUserData() {
+async function fetchUserData(isPolling = false) {
     if (!user?.id) {
-        updateStatusUI({ subscription_type: 'Free' });
+        if (!isPolling) updateStatusUI({ subscription_type: 'Free' });
         return;
     }
     try {
@@ -40,13 +40,19 @@ async function fetchUserData() {
             updateStatusUI(userData);
         } else {
             // User not found in DB, default to Free
-            updateStatusUI({ subscription_type: 'Free' });
+            if (!isPolling) updateStatusUI({ subscription_type: 'Free' });
         }
     } catch (err) {
         console.error('Error fetching user data:', err);
-        updateStatusUI({ subscription_type: 'Free' });
+        if (!isPolling) updateStatusUI({ subscription_type: 'Free' });
     }
 }
+
+// Initial fetch
+fetchUserData();
+
+// Real-time Update (Polling every 5 seconds)
+setInterval(() => fetchUserData(true), 5000);
 
 function updateStatusUI(userData) {
     console.log('Updating UI with:', userData);

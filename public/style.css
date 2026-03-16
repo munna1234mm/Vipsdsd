@@ -121,9 +121,10 @@ h1 {
 }
 
 .plan-card.active {
-    border: 2px solid var(--success) !important;
-    background: linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, rgba(23, 28, 41, 0.9) 100%);
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.3) !important;
+    border: 3px solid var(--success) !important;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.15) 0%, rgba(23, 28, 41, 0.9) 100%);
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.4) !important;
+    transform: scale(1.02);
 }
 
 .active-plan-badge {
