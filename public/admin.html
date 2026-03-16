@@ -159,6 +159,7 @@
         <div class="tab-container">
             <button class="tab-btn active" onclick="openTab('codes')">Redeem Codes</button>
             <button class="tab-btn" onclick="openTab('commands')">Custom Commands</button>
+            <button class="tab-btn" onclick="openTab('usersTab')">Manage Users</button>
         </div>
 
         <!-- tab: Redeem Codes -->
@@ -208,6 +209,39 @@
 
             <div class="list-container" id="command-list">
                 <p style="text-align: center; color: var(--text-muted);">Switch tabs to refresh lists...</p>
+            </div>
+        </div>
+
+        <!-- tab: Manage Users -->
+        <div id="usersTab" class="tab-content">
+            <h2>Manual User Management</h2>
+            <div class="form-group">
+                <label>User's Chat ID</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="manage-chat-id" placeholder="Enter User ID">
+                    <button onclick="fetchExistingUser()" style="width: auto; padding: 0 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 12px; cursor: pointer;">Find</button>
+                </div>
+            </div>
+            <div id="user-edit-form" style="display:none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <div class="form-group">
+                    <label>Set Plan</label>
+                    <select id="manage-plan">
+                        <option value="Free">Free</option>
+                        <option value="VIP">VIP</option>
+                        <option value="SVIP">SVIP</option>
+                        <option value="SSVIP">SSVIP</option>
+                        <option value="KING">KING</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="date" id="manage-expiry">
+                </div>
+                <div class="form-group">
+                    <label>Balance (USD)</label>
+                    <input type="number" id="manage-balance" value="0">
+                </div>
+                <button id="update-user-btn" class="buy-btn">Update User Status</button>
             </div>
         </div>
     </div>
@@ -316,6 +350,63 @@
                 fetchCommands();
             } catch (err) {}
         }
+
+        // Load commands when admin ID is entered
+        adminIdInput.addEventListener('blur', fetchCommands);
+
+        // --- Manual User Edit Logic ---
+        async function fetchExistingUser() {
+            const chatId = document.getElementById('manage-chat-id').value.trim();
+            if (!chatId) return alert('Enter Chat ID');
+            
+            try {
+                const res = await fetch(`/api/user/${chatId}`);
+                if (res.ok) {
+                    const user = await res.json();
+                    document.getElementById('user-edit-form').style.display = 'block';
+                    document.getElementById('manage-plan').value = user.subscription_type || 'Free';
+                    document.getElementById('manage-balance').value = user.balance || 0;
+                    if (user.subscription_expiry) {
+                        document.getElementById('manage-expiry').value = user.subscription_expiry.split('T')[0];
+                    }
+                } else {
+                    alert('User not found in local DB. You can still create them below.');
+                    document.getElementById('user-edit-form').style.display = 'block';
+                }
+            } catch (err) {
+                alert('Fetch failed');
+            }
+        }
+
+        document.getElementById('update-user-btn').addEventListener('click', async () => {
+            const adminId = adminIdInput.value.trim();
+            const targetChatId = document.getElementById('manage-chat-id').value.trim();
+            const plan = document.getElementById('manage-plan').value;
+            const expiryDate = document.getElementById('manage-expiry').value;
+            const balance = document.getElementById('manage-balance').value;
+
+            if (!adminId || !targetChatId) return alert('Admin ID and User ID required');
+
+            // Format date to ISO
+            let isoExpiry = null;
+            if (expiryDate) isoExpiry = new Date(expiryDate).toISOString();
+
+            try {
+                const res = await fetch('/api/admin/update-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adminId, targetChatId, plan, expiry: isoExpiry, balance })
+                });
+                if (res.ok) {
+                    alert('User updated and synced to Firebase!');
+                } else {
+                    const d = await res.json();
+                    alert(d.error);
+                }
+            } catch (err) {
+                alert('Update failed');
+            }
+        });
 
         addCmdBtn.addEventListener('click', async () => {
             const adminId = adminIdInput.value.trim();

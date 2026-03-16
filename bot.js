@@ -31,6 +31,35 @@ async function syncUserToFirebase(chatId, data) {
     }
 }
 
+async function getEffectiveUser(chatId) {
+    try {
+        // 1. Check SQLite
+        let user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+        
+        // 2. Fallback to Firestore if SQL is missing or Free (Source of Truth)
+        if (!user || user.subscription_type === 'Free' || user.subscription_type === 'Loading...') {
+            const doc = await fsDb.collection("users").doc(String(chatId)).get();
+            if (doc.exists) {
+                const fbData = doc.data();
+                // Check if Firestore has better info
+                if (fbData.subscription_type && fbData.subscription_type !== 'Free') {
+                    console.log(`[RECOVERY] Found Premium status in Firestore for ${chatId}: ${fbData.subscription_type}`);
+                    // Update local cache
+                    await db.run(
+                        'INSERT OR REPLACE INTO users (chat_id, username, subscription_type, subscription_expiry, balance) VALUES (?, ?, ?, ?, ?)',
+                        [chatId, fbData.username || 'User', fbData.subscription_type, fbData.subscription_expiry, fbData.balance || 0]
+                    );
+                    user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+                }
+            }
+        }
+        return user;
+    } catch (err) {
+        console.error('getEffectiveUser error:', err);
+        return null; // Fallback to safe null
+    }
+}
+
 // Global error handlers to catch silent crashes
 process.on('uncaughtException', (err) => {
     console.error('⚠️ UNCAUGHT EXCEPTION:', err);
@@ -185,7 +214,8 @@ async function startBot() {
             const chatId = ctx.from.id;
             const isAdmin = String(chatId) === String(process.env.ADMIN_ID);
             
-            let user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+            // USE THE NEW SECURE SEARCH
+            let user = await getEffectiveUser(chatId);
             
             // Auto-create record if user interacts but isn't in DB yet
             if (!user && !isAdmin) {
@@ -412,6 +442,31 @@ app.delete('/api/admin/delete-command/:id', async (req, res) => {
     try {
         await db.run('DELETE FROM custom_commands WHERE id = ?', [req.params.id]);
         res.json({ message: 'Deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Manual User Management API
+app.post('/api/admin/update-user', async (req, res) => {
+    const { adminId, targetChatId, plan, expiry, balance } = req.body;
+    if (String(adminId) !== String(process.env.ADMIN_ID)) return res.status(403).json({ error: 'Unauthorized' });
+    
+    try {
+        const chatId = parseInt(targetChatId);
+        if (!chatId) return res.status(400).json({ error: 'Invalid Chat ID' });
+
+        // Update SQLite
+        await db.run(
+            'INSERT OR REPLACE INTO users (chat_id, subscription_type, subscription_expiry, balance) VALUES (?, ?, ?, ?)',
+            [chatId, plan, expiry, balance || 0]
+        );
+
+        // Fetch and Sync to Firebase
+        const updatedUser = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+        await syncUserToFirebase(chatId, updatedUser);
+
+        res.json({ message: 'User updated successfully', user: updatedUser });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
