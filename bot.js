@@ -171,7 +171,11 @@ app.get('/api/user-photo/:chatId', async (req, res) => {
 
 app.post('/api/admin/generate-code', async (req, res) => {
     const { type, value, adminId } = req.body;
-    if (adminId !== process.env.ADMIN_ID) return res.status(403).json({ error: 'Unauthorized' });
+    // Robust comparison as strings
+    if (String(adminId) !== String(process.env.ADMIN_ID)) {
+        console.warn(`Unauthorized access attempt with ID: ${adminId}`);
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
 
     const code = Math.random().toString(36).substring(2, 10).toUpperCase();
     try {
@@ -193,12 +197,27 @@ app.post('/api/redeem', async (req, res) => {
         if (redeemCode.type === 'Balance') {
             await db.run('UPDATE users SET balance = balance + ? WHERE chat_id = ?', [parseInt(redeemCode.value), chatId]);
         } else if (redeemCode.type === 'Subscription') {
-            await db.run('UPDATE users SET subscription_type = ? WHERE chat_id = ?', [redeemCode.value, chatId]);
+            const plan = redeemCode.value;
+            let days = 0;
+            if (plan === 'VIP') days = 7;
+            else if (plan === 'SVIP') days = 15;
+            else if (plan === 'SSVIP') days = 30;
+            else if (plan === 'KING') days = 60;
+
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + days);
+            const expiryStr = expiryDate.toISOString();
+
+            await db.run(
+                'UPDATE users SET subscription_type = ?, subscription_expiry = ? WHERE chat_id = ?',
+                [plan, expiryStr, chatId]
+            );
         }
 
         await db.run('UPDATE redeem_codes SET is_used = 1, used_by = ? WHERE id = ?', [chatId, redeemCode.id]);
         res.json({ message: 'Code redeemed successfully!' });
     } catch (err) {
+        console.error('Redeem error:', err);
         res.status(500).json({ error: err.message });
     }
 });
