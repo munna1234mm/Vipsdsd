@@ -45,6 +45,29 @@
             color: var(--success);
             letter-spacing: 2px;
         }
+        .section-separator {
+            margin: 40px 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .command-list {
+            margin-top: 20px;
+        }
+        .command-item {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-btn {
+            background: #ff4d4d;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -81,6 +104,28 @@
             <p>Generated Code:</p>
             <div class="result-code" id="generated-code">XXXX-XXXX</div>
             <p style="font-size: 0.8rem; margin-top: 10px;">Copy and send this to the user.</p>
+        </div>
+
+        <div class="section-separator"></div>
+
+        <h2>Custom Commands Manager</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">
+            Commands defined here will trigger private responses when used in groups.
+        </p>
+        
+        <div class="form-group">
+            <label>Command (e.g. !help)</label>
+            <input type="text" id="new-command" placeholder="!command">
+        </div>
+        <div class="form-group">
+            <label>Auto Response Message</label>
+            <textarea id="command-response" style="width: 100%; padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;" rows="3" placeholder="Enter the message you want to send privately"></textarea>
+        </div>
+        <button id="add-command-btn" class="buy-btn">Add Command</button>
+
+        <div class="command-list" id="command-list-container">
+            <!-- Commands will load here -->
+            <p style="text-align: center; color: var(--text-muted);">Loading commands...</p>
         </div>
     </div>
 
@@ -135,6 +180,76 @@
                 generateBtn.textContent = 'Generate Code';
             }
         });
+
+        // Command Management Logic
+        const addCmdBtn = document.getElementById('add-command-btn');
+        const cmdListContainer = document.getElementById('command-list-container');
+        
+        async function fetchCommands() {
+            const adminId = adminIdInput.value;
+            if (!adminId) return;
+            
+            try {
+                const res = await fetch(`/api/admin/commands?adminId=${adminId}`);
+                if (res.ok) {
+                    const commands = await res.json();
+                    renderCommands(commands);
+                }
+            } catch (err) {}
+        }
+
+        function renderCommands(commands) {
+            if (commands.length === 0) {
+                cmdListContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No custom commands yet.</p>';
+                return;
+            }
+            cmdListContainer.innerHTML = commands.map(cmd => `
+                <div class="command-item">
+                    <div>
+                        <b style="color: var(--primary);">${cmd.command}</b><br>
+                        <small style="color: var(--text-muted);">${cmd.response.substring(0, 30)}...</small>
+                    </div>
+                    <button class="delete-btn" onclick="deleteCommand(${cmd.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteCommand(id) {
+            const adminId = adminIdInput.value;
+            if (!confirm('Delete this command?')) return;
+            
+            try {
+                const res = await fetch(`/api/admin/delete-command/${id}?adminId=${adminId}`, { method: 'DELETE' });
+                if (res.ok) fetchCommands();
+            } catch (err) {}
+        }
+
+        addCmdBtn.addEventListener('click', async () => {
+            const adminId = adminIdInput.value;
+            const command = document.getElementById('new-command').value;
+            const response = document.getElementById('command-response').value;
+
+            if (!adminId || !command || !response) return alert('Fill all fields');
+
+            try {
+                const res = await fetch('/api/admin/add-command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adminId, command, response })
+                });
+                if (res.ok) {
+                    document.getElementById('new-command').value = '';
+                    document.getElementById('command-response').value = '';
+                    fetchCommands();
+                } else {
+                    const d = await res.json();
+                    alert(d.error);
+                }
+            } catch (err) {}
+        });
+
+        // Load commands when admin ID is entered
+        adminIdInput.addEventListener('blur', fetchCommands);
     </script>
 </body>
 </html>
