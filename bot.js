@@ -148,16 +148,24 @@ async function startBot() {
         ctx.reply(`For any issues, please contact the administrator.`);
     });
 
-    bot.hears(/^[!\/]?(id)$/i, async (ctx) => {
+    bot.command('check', async (ctx) => {
         try {
-            if (ctx.message.reply_to_message) {
-                const targetUser = ctx.message.reply_to_message.from;
-                ctx.replyWithMarkdown(`👤 User: [${targetUser.first_name}](tg://user?id=${targetUser.id})\n🆔 ID: \`${targetUser.id}\``);
-            } else {
-                ctx.replyWithMarkdown(`🆔 Your ID: \`${ctx.from.id}\``);
-            }
-        } catch (err) {
-            console.error('Error in id handler:', err);
+            const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [ctx.from.id]);
+            if (!user) return ctx.reply("You are not registered yet. Use /start first.");
+            
+            const now = new Date();
+            const expiry = user.subscription_expiry ? new Date(user.subscription_expiry) : null;
+            const isPremium = user.subscription_type !== 'Free' && (!expiry || isNaN(expiry.getTime()) || expiry > now);
+            
+            let msg = `👤 *Account Diagnostics*\n`;
+            msg += `🆔 ID: \`${ctx.from.id}\`\n`;
+            msg += `🌟 Plan: *${user.subscription_type}*\n`;
+            msg += `📅 Expiry: \`${user.subscription_expiry || 'N/A'}\`\n`;
+            msg += `✅ Result: ${isPremium ? '🟢 PREMIUM' : '🔴 FREE'}`;
+            
+            ctx.replyWithMarkdown(msg);
+        } catch (e) {
+            ctx.reply("Error in diagnostics.");
         }
     });
 
