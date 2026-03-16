@@ -175,21 +175,33 @@ async function startBot() {
             if (!customCmd) return next();
 
             const chatId = ctx.from.id;
-            const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+            const isAdmin = String(chatId) === String(process.env.ADMIN_ID);
             
-            console.log(`[DEBUG] Membership Check for ${chatId}:`, {
-                found: !!user,
-                type: user?.subscription_type,
-                expiry: user?.subscription_expiry,
-                now: new Date().toISOString()
-            });
+            let user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+            
+            // Auto-create record if user interacts but isn't in DB yet
+            if (!user && !isAdmin) {
+                try {
+                    await db.run('INSERT INTO users (chat_id, username, subscription_type) VALUES (?, ?, ?)', [chatId, ctx.from.username || 'User', 'Free']);
+                    user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+                } catch (e) {
+                    console.error('Error auto-creating user:', e);
+                }
+            }
 
             // Plan Validation Logic
-            const isPremium = user && 
-                              user.subscription_type !== 'Free' && 
-                              (user.subscription_expiry && new Date(user.subscription_expiry) > new Date());
+            let isPremium = isAdmin; // Admin is always premium
+            if (!isPremium && user) {
+                const now = new Date();
+                const expiry = user.subscription_expiry ? new Date(user.subscription_expiry) : null;
+                
+                // User is premium if type is not Free AND they have a future expiry date
+                if (user.subscription_type !== 'Free' && expiry && expiry > now) {
+                    isPremium = true;
+                }
+            }
             
-            console.log(`[DEBUG] isPremium Result: ${isPremium}`);
+            console.log(`[MEMBERSHIP] User: ${chatId} | Admin: ${isAdmin} | Type: ${user?.subscription_type} | Premium: ${isPremium}`);
 
             if (isPremium) {
                 // SEND TO PM
