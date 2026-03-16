@@ -1,6 +1,34 @@
 const { Telegraf, Markup } = require('telegraf');
 const { setupDb } = require('./database');
+const { initializeApp } = require('firebase/app');
+const { getFirestore, doc, setDoc } = require('firebase/firestore');
 require('dotenv').config();
+
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyCmme-tDa8lx2SdI1TnMAro63mpmr33WrI",
+  authDomain: "vipbot-f501b.firebaseapp.com",
+  projectId: "vipbot-f501b",
+  storageBucket: "vipbot-f501b.firebasestorage.app",
+  messagingSenderId: "792235327406",
+  appId: "1:792235327406:web:4ab43d45e8e5b25b27123f",
+  measurementId: "G-90385K6XNW"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const fsDb = getFirestore(fbApp);
+
+async function syncUserToFirebase(chatId, data) {
+    try {
+        await setDoc(doc(fsDb, "users", String(chatId)), {
+            ...data,
+            lastUpdated: new Date().toISOString()
+        }, { merge: true });
+        console.log(`Synced user ${chatId} to Firebase`);
+    } catch (err) {
+        console.error('Firebase Sync Error:', err);
+    }
+}
 
 // Global error handlers to catch silent crashes
 process.on('uncaughtException', (err) => {
@@ -49,6 +77,9 @@ async function startBot() {
                     referral_count: 0
                 };
             }
+
+            // Sync to Firebase for real-time app update
+            syncUserToFirebase(chatId, user);
 
             const welcomeMsg = `👋 *Welcome, ${ctx.from.first_name}!* \n\n` +
                 `💰 Balance: *${user.balance ?? 0} USD*\n` +
@@ -235,6 +266,10 @@ app.post('/api/redeem', async (req, res) => {
         
         // Fetch updated user to return to frontend
         const updatedUser = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+        
+        // Sync to Firebase
+        syncUserToFirebase(chatId, updatedUser);
+
         console.log(`Redemption successful for ${chatId}. New status:`, updatedUser);
         res.json({ message: 'Code redeemed successfully!', user: updatedUser });
         

@@ -101,6 +101,29 @@
             </section>
         </main>
     </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyCmme-tDa8lx2SdI1TnMAro63mpmr33WrI",
+          authDomain: "vipbot-f501b.firebaseapp.com",
+          projectId: "vipbot-f501b",
+          storageBucket: "vipbot-f501b.firebasestorage.app",
+          messagingSenderId: "792235327406",
+          appId: "1:792235327406:web:4ab43d45e8e5b25b27123f",
+          measurementId: "G-90385K6XNW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Export for use in script.js
+        window.firebaseDb = db;
+        window.onFirestoreSnapshot = onSnapshot;
+        window.firestoreDoc = doc;
+    </script>
     <script src="script.js"></script>
 </body>
 </html>

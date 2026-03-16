@@ -51,8 +51,22 @@ async function fetchUserData(isPolling = false) {
 // Initial fetch
 fetchUserData();
 
-// Real-time Update (Polling every 5 seconds)
-setInterval(() => fetchUserData(true), 5000);
+// Real-time Update using Firebase Listeners
+function setupRealtimeListener() {
+    if (!user?.id || !window.firebaseDb) return;
+    
+    console.log('Setting up Firebase real-time listener for:', user.id);
+    window.onFirestoreSnapshot(window.firestoreDoc(window.firebaseDb, "users", String(user.id)), (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            console.log('Firebase Real-time Update:', data);
+            updateStatusUI(data);
+        }
+    });
+}
+
+// Wait for Firebase to load then setup
+setTimeout(setupRealtimeListener, 1000);
 
 function updateStatusUI(userData) {
     console.log('Updating UI with:', userData);
