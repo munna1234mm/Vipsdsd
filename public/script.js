@@ -72,14 +72,10 @@ redeemBtn.addEventListener('click', async () => {
     }
 });
 
-// Handle Buy buttons (Placeholder for payment integration)
+// Handle Buy buttons (Link to Admin)
 document.querySelectorAll('.buy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const plan = btn.parentElement.dataset.plan;
-        tg.showPopup({
-            title: 'Purchase Plan',
-            message: `You selected the ${plan} plan. (Payment system integration required)`,
-            buttons: [{ type: 'ok' }]
-        });
+        tg.openTelegramLink('https://t.me/developermunna');
     });
 });
