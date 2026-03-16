@@ -5,7 +5,7 @@ async function setupDb() {
     const dbPath = path.join(__dirname, 'database.sqlite');
     const db = new Database(dbPath);
 
-    // Initial setup
+    // Initial setup with subscription fields
     db.exec(`
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -14,6 +14,20 @@ async function setupDb() {
             balance INTEGER DEFAULT 0,
             referred_by INTEGER,
             referral_count INTEGER DEFAULT 0,
+            subscription_type TEXT DEFAULT 'Free',
+            subscription_expiry DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS redeem_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE,
+            type TEXT, -- e.g., 'Balance', 'Subscription'
+            value TEXT, -- e.g., '50', 'Premium_30'
+            is_used INTEGER DEFAULT 0,
+            used_by INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP Subscription</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="user-info">
+                <span id="username">Loading...</span>
+            </div>
+            <h1>Premium Plans</h1>
+        </header>
+
+        <main>
+            <div class="plans-container">
+                <div class="plan-card" data-plan="Basic">
+                    <h2>Basic</h2>
+                    <p class="price">$10/month</p>
+                    <ul>
+                        <li>Feature A</li>
+                        <li>Feature B</li>
+                    </ul>
+                    <button class="buy-btn">Buy Now</button>
+                </div>
+                <div class="plan-card featured" data-plan="Pro">
+                    <span class="badge">Popular</span>
+                    <h2>Pro</h2>
+                    <p class="price">$25/month</p>
+                    <ul>
+                        <li>Feature A</li>
+                        <li>Feature B</li>
+                        <li>Feature C</li>
+                    </ul>
+                    <button class="buy-btn">Buy Now</button>
+                </div>
+                <div class="plan-card" data-plan="VIP">
+                    <h2>VIP</h2>
+                    <p class="price">$50/month</p>
+                    <ul>
+                        <li>All Features</li>
+                        <li>Priority Support</li>
+                    </ul>
+                    <button class="buy-btn">Buy Now</button>
+                </div>
+            </div>
+
+            <section class="redeem-section">
+                <h3>Redeem Code</h3>
+                <div class="redeem-input-group">
+                    <input type="text" id="redeem-code" placeholder="Enter code here...">
+                    <button id="redeem-btn">Apply</button>
+                </div>
+                <p id="redeem-status"></p>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
