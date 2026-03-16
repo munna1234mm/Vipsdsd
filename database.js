@@ -24,10 +24,19 @@ async function setupDb() {
         CREATE TABLE IF NOT EXISTS redeem_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE,
-            type TEXT, -- e.g., 'Balance', 'Subscription'
-            value TEXT, -- e.g., '50', 'Premium_30'
+            type TEXT,
+            value TEXT,
             is_used INTEGER DEFAULT 0,
             used_by INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS custom_commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            command TEXT UNIQUE,
+            response TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
@@ -35,6 +44,7 @@ async function setupDb() {
     // Compatibility shim for async calls in bot.js
     return {
         get: async (sql, params = []) => db.prepare(sql).get(...params),
+        all: async (sql, params = []) => db.prepare(sql).all(...params),
         run: async (sql, params = []) => db.prepare(sql).run(...params),
         exec: async (sql) => db.exec(sql),
         close: async () => db.close()

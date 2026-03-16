@@ -161,6 +161,51 @@ async function startBot() {
         }
     });
 
+    // Membership-Gated Custom Commands Listener
+    bot.on('message', async (ctx, next) => {
+        if (!ctx.message?.text || !db) return next();
+        
+        const text = ctx.message.text.trim().toLowerCase();
+        
+        try {
+            const customCmd = await db.get('SELECT * FROM custom_commands WHERE command = ?', [text]);
+            if (!customCmd) return next();
+
+            const chatId = ctx.from.id;
+            const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+
+            // Plan Validation Logic
+            const isPremium = user && 
+                              user.subscription_type !== 'Free' && 
+                              (!user.subscription_expiry || new Date(user.subscription_expiry) > new Date());
+
+            if (isPremium) {
+                // SEND TO PM
+                try {
+                    await ctx.telegram.sendMessage(chatId, customCmd.response);
+                    await ctx.telegram.sendMessage(chatId, "Please check your inbox, the service has been provided to you.");
+                } catch (err) {
+                    console.warn(`Could not send PM to ${chatId}:`, err.message);
+                }
+            } else {
+                // SEND TO PM FOR FREE USERS
+                try {
+                    await ctx.telegram.sendMessage(chatId, "This service is not available for free users. To use this service, you need to upgrade your plan.");
+                } catch (err) {
+                    console.warn(`Could not send PM to ${chatId}:`, err.message);
+                }
+            }
+            
+            // ALWAYS delete the command message from group to keep it hidden/clean
+            if (ctx.chat.type !== 'private') {
+                try { await ctx.deleteMessage(); } catch(e) {}
+            }
+
+        } catch (err) {
+            console.error('Custom Command Error:', err);
+        }
+    });
+
     bot.launch();
     console.log('Bot is running...');
 }
@@ -283,6 +328,41 @@ app.post('/api/redeem', async (req, res) => {
     } catch (err) {
         console.error('CRITICAL REDEEM ERROR:', err);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Custom Commands Admin APIs
+app.get('/api/admin/commands', async (req, res) => {
+    const { adminId } = req.query;
+    if (String(adminId) !== String(process.env.ADMIN_ID)) return res.status(403).json({ error: 'Unauthorized' });
+    try {
+        const rows = await db.all('SELECT * FROM custom_commands ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/add-command', async (req, res) => {
+    const { adminId, command, response } = req.body;
+    if (String(adminId) !== String(process.env.ADMIN_ID)) return res.status(403).json({ error: 'Unauthorized' });
+    try {
+        const cleanCmd = String(command).trim().toLowerCase();
+        await db.run('INSERT OR REPLACE INTO custom_commands (command, response) VALUES (?, ?)', [cleanCmd, response]);
+        res.json({ message: 'Command saved' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/admin/delete-command/:id', async (req, res) => {
+    const { adminId } = req.query;
+    if (String(adminId) !== String(process.env.ADMIN_ID)) return res.status(403).json({ error: 'Unauthorized' });
+    try {
+        await db.run('DELETE FROM custom_commands WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
