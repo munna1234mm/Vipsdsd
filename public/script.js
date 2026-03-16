@@ -28,16 +28,23 @@ if (user) {
 
 // Fetch user data from our API
 async function fetchUserData() {
-    if (!user?.id) return;
+    if (!user?.id) {
+        updateStatusUI({ subscription_type: 'Free' });
+        return;
+    }
     try {
         const response = await fetch(`/api/user/${user.id}`);
         const userData = await response.json();
         
         if (userData && !userData.error) {
             updateStatusUI(userData);
+        } else {
+            // User not found in DB, default to Free
+            updateStatusUI({ subscription_type: 'Free' });
         }
     } catch (err) {
         console.error('Error fetching user data:', err);
+        updateStatusUI({ subscription_type: 'Free' });
     }
 }
 
@@ -51,7 +58,22 @@ function updateStatusUI(userData) {
     const currentPlan = userData.subscription_type || 'Free';
     planStatus.textContent = `${currentPlan} Plan`;
     
-    // Change color based on plan
+    // Highlight active card
+    document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.remove('active');
+        const badge = card.querySelector('.active-plan-badge');
+        if (badge) badge.remove();
+
+        if (card.dataset.plan === currentPlan && currentPlan !== 'Free') {
+            card.classList.add('active');
+            const activeBadge = document.createElement('span');
+            activeBadge.className = 'active-plan-badge';
+            activeBadge.textContent = 'Active Now';
+            card.querySelector('.plan-header').appendChild(activeBadge);
+        }
+    });
+
+    // Change status text color
     if (currentPlan === 'Free') {
         planStatus.style.color = 'var(--text-muted)';
     } else {
