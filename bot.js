@@ -52,8 +52,7 @@ async function startBot() {
             const username = ctx.from.username || 'N/A';
             const referralCode = ctx.startPayload;
 
-            let user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
-
+            // Ensure user is in SQLite
             if (!user) {
                 let referrerId = null;
                 if (referralCode && parseInt(referralCode) !== chatId) {
@@ -76,10 +75,14 @@ async function startBot() {
                     subscription_type: 'Free',
                     referral_count: 0
                 };
+            } else {
+                // Update username if changed
+                await db.run('UPDATE users SET username = ? WHERE chat_id = ?', [username, chatId]);
             }
 
-            // Sync to Firebase for real-time app update
-            syncUserToFirebase(chatId, user);
+            // Always sync to Firebase on start to ensure document exists
+            const latestUser = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+            syncUserToFirebase(chatId, latestUser);
 
             const welcomeMsg = `👋 *Welcome, ${ctx.from.first_name}!* \n\n` +
                 `💰 Balance: *${user.balance ?? 0} USD*\n` +
@@ -236,8 +239,14 @@ app.post('/api/redeem', async (req, res) => {
         const redeemCode = await db.get('SELECT * FROM redeem_codes WHERE UPPER(code) = ? AND is_used = 0', [cleanCode]);
         
         if (!redeemCode) {
-            console.log(`Invalid code attempt: ${cleanCode}`);
             return res.status(400).json({ error: 'Invalid or already used code' });
+        }
+
+        // Ensure user exists in SQLite before applying
+        let user = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
+        if (!user) {
+            console.log(`Creating user ${chatId} during redemption`);
+            await db.run('INSERT INTO users (chat_id, subscription_type) VALUES (?, ?)', [chatId, 'Free']);
         }
 
         // Apply reward
@@ -253,8 +262,6 @@ app.post('/api/redeem', async (req, res) => {
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + days);
             
-            console.log(`Activating ${plan} for ${chatId} until ${expiryDate.toISOString()}`);
-
             await db.run(
                 'UPDATE users SET subscription_type = ?, subscription_expiry = ? WHERE chat_id = ?',
                 [plan, expiryDate.toISOString(), chatId]
@@ -264,13 +271,12 @@ app.post('/api/redeem', async (req, res) => {
         // Mark code as used
         await db.run('UPDATE redeem_codes SET is_used = 1, used_by = ? WHERE id = ?', [chatId, redeemCode.id]);
         
-        // Fetch updated user to return to frontend
+        // Fetch updated user
         const updatedUser = await db.get('SELECT * FROM users WHERE chat_id = ?', [chatId]);
         
         // Sync to Firebase
-        syncUserToFirebase(chatId, updatedUser);
+        await syncUserToFirebase(chatId, updatedUser);
 
-        console.log(`Redemption successful for ${chatId}. New status:`, updatedUser);
         res.json({ message: 'Code redeemed successfully!', user: updatedUser });
         
     } catch (err) {
