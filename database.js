@@ -1,14 +1,12 @@
-const sqlite3 = require('sqlite3');
-const { open } = require('sqlite');
+const Database = require('better-sqlite3');
 const path = require('path');
 
 async function setupDb() {
-    const db = await open({
-        filename: path.join(__dirname, 'database.sqlite'),
-        driver: sqlite3.Database
-    });
+    const dbPath = path.join(__dirname, 'database.sqlite');
+    const db = new Database(dbPath);
 
-    await db.exec(`
+    // Initial setup
+    db.exec(`
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             chat_id INTEGER UNIQUE,
@@ -20,7 +18,13 @@ async function setupDb() {
         )
     `);
 
-    return db;
+    // Compatibility shim for async calls in bot.js
+    return {
+        get: async (sql, params = []) => db.prepare(sql).get(...params),
+        run: async (sql, params = []) => db.prepare(sql).run(...params),
+        exec: async (sql) => db.exec(sql),
+        close: async () => db.close()
+    };
 }
 
 module.exports = { setupDb };
