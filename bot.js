@@ -49,6 +49,7 @@ async function startBot() {
 
     bot.hears('💰 Balance', async (ctx) => {
         const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [ctx.from.id]);
+        if (!user) return ctx.reply('Please send /start to register first.');
         ctx.replyWithMarkdown(`💰 Your current balance: *${user.balance} USD*`);
     });
 
@@ -65,6 +66,7 @@ async function startBot() {
 
     bot.hears('👤 Profile', async (ctx) => {
         const user = await db.get('SELECT * FROM users WHERE chat_id = ?', [ctx.from.id]);
+        if (!user) return ctx.reply('Please send /start to register first.');
         const profileMsg = `👤 *Your Profile*\n\n` +
             `🆔 ID: \`${ctx.from.id}\`\n` +
             `👤 Username: @${ctx.from.username || 'N/A'}\n` +
