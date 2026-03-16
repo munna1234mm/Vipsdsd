@@ -80,7 +80,7 @@ async function startBot() {
         ctx.reply(`For any issues, please contact the administrator.`);
     });
 
-    bot.command('id', async (ctx) => {
+    bot.hears(/^[!\/]?(id)$/i, async (ctx) => {
         if (ctx.message.reply_to_message) {
             const targetUser = ctx.message.reply_to_message.from;
             ctx.replyWithMarkdown(`👤 User: [${targetUser.first_name}](tg://user?id=${targetUser.id})\n🆔 ID: \`${targetUser.id}\``);
