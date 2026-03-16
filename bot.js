@@ -80,6 +80,15 @@ async function startBot() {
         ctx.reply(`For any issues, please contact the administrator.`);
     });
 
+    bot.command('id', async (ctx) => {
+        if (ctx.message.reply_to_message) {
+            const targetUser = ctx.message.reply_to_message.from;
+            ctx.replyWithMarkdown(`👤 User: [${targetUser.first_name}](tg://user?id=${targetUser.id})\n🆔 ID: \`${targetUser.id}\``);
+        } else {
+            ctx.replyWithMarkdown(`🆔 Your ID: \`${ctx.from.id}\``);
+        }
+    });
+
     bot.launch();
     console.log('Bot is running...');
 }
