@@ -53,24 +53,32 @@ fetchUserData();
 
 // Real-time Update using Firebase Listeners
 function setupRealtimeListener() {
-    if (!user?.id) return;
+    if (!user?.id) {
+        console.warn('Cannot setup listener: No User ID');
+        return;
+    }
     
     // Check if Firebase is ready every 500ms until it is
-    if(!window.firebaseDb) {
+    if(!window.firebaseDb || !window.onFirestoreSnapshot) {
+        console.log('Firebase not ready, retrying in 500ms...');
         setTimeout(setupRealtimeListener, 500);
         return;
     }
     
-    console.log('Firebase Listener Active for:', user.id);
-    window.onFirestoreSnapshot(window.firestoreDoc(window.firebaseDb, "users", String(user.id)), (doc) => {
+    console.log('Firebase Listener ACTIVE for User ID:', user.id);
+    const userDocRef = window.firestoreDoc(window.firebaseDb, "users", String(user.id));
+    
+    window.onFirestoreSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
             const data = doc.data();
-            console.log('Firebase Sync:', data);
+            console.log('🔥 FIREBASE UPDATE DETECTED:', data);
             updateStatusUI(data);
         } else {
-            console.log('Firebase document not found, syncing from SQL...');
-            fetchUserData(); // Fallback to SQL if Firebase is empty
+            console.warn('🔥 Firebase doc does not exist for this user yet.');
+            fetchUserData(); // Fallback to SQL
         }
+    }, (error) => {
+        console.error('🔥 Firebase Listener Error:', error);
     });
 }
 

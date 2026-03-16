@@ -1,3 +1,4 @@
+// Forced rebuild to ensure dependencies are installed correctly.
 const { Telegraf, Markup } = require('telegraf');
 const { setupDb } = require('./database');
 const firebase = require('firebase/compat/app');
